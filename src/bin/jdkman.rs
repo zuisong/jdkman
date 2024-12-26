@@ -315,6 +315,7 @@ pub(crate) fn run() -> Result<()> {
 
 pub fn main() {
     if let Err(err) = run() {
+        dbg!(&err);
         eprintln!("{err}");
         std::process::exit(1)
     }

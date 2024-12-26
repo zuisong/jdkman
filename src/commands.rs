@@ -473,9 +473,14 @@ mod install_command {
 
         let binary_input = temp_dir.join(format!("java-{version}.bin"));
 
+        fs::create_dir_all(temp_dir).ok();
+        fs::remove_file(&binary_input).ok();
+
         let file = OpenOptions::new()
             .write(true)
             .create_new(true)
+            
+            // .create(true)
             .open(&binary_input)?;
 
         // TODO: indicatif progressbar every 100K every 50ms/20fps
@@ -718,7 +723,7 @@ mod list_command {
         let installed = list_candidates(candidates_dir)?;
 
         let url = format!(
-            "{api}/candidates/java/{platform}/versions/list?current={current}&installed=${installed}",
+            "{api}/candidates/java/{platform}/versions/list?current={current}&installed={installed}",
             api = candidates_api,
             platform = platform,
             current = current.unwrap_or_default(),
@@ -783,9 +788,10 @@ mod shared {
     // }
 
     pub(super) fn list_candidates(candidates_dir: &Path) -> io::Result<Vec<Candidate>> {
-        let mut candidates = fs::read_dir(candidates_dir)?
+        let mut candidates = fs::read_dir(candidates_dir).map(|it|it
             .filter_map(read_entry)
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>>())
+           .unwrap_or(vec![]);
 
         // sort by version
         candidates.sort();
