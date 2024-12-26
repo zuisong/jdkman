@@ -371,7 +371,7 @@ mod install_command {
         AlreadyInstalled(String),
         InvalidVersion(String),
         ArchiveCorrupt(String, PathBuf),
-        DownloadError(reqwest::Error),
+        DownloadError(ureq::Error),
         Other(io::Error),
     }
 
@@ -380,8 +380,8 @@ mod install_command {
             Self::Other(val)
         }
     }
-    impl From<reqwest::Error> for InstallError {
-        fn from(val: reqwest::Error) -> Self {
+    impl From<ureq::Error> for InstallError {
+        fn from(val: ureq::Error) -> Self {
             Self::DownloadError(val)
         }
     }
@@ -479,7 +479,6 @@ mod install_command {
         let file = OpenOptions::new()
             .write(true)
             .create_new(true)
-            
             // .create(true)
             .open(&binary_input)?;
 
@@ -487,14 +486,15 @@ mod install_command {
         // TODO: .verbose_fn_if(verbose, super::shared::print_verbose)
 
         let start = Instant::now();
-        let mut response = reqwest::blocking::get(&url)?;
+        let  response = ureq::get(&url).call()?;
 
-        if let Some(size) = response.content_length() {
-            file.set_len(size)?;
-        }
+        // if let Some(size) = response .content_length() {
+        //     file.set_len(size)?;
+        // }
 
         let mut wtr = BufWriter::new(file);
-        let bytes = response.copy_to(&mut wtr)?;
+        let bytes = io::copy(&mut response.into_body().as_reader() , &mut wtr)?;
+        // let bytes = response.copy_to(&mut wtr)?;
 
         if verbose {
             let took = start.elapsed();
@@ -753,25 +753,17 @@ mod shared {
             concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
         // TODO: .verbose_fn_if(verbose, print_verbose)
 
-        let response = reqwest::blocking::Client::builder()
-            .user_agent(APP_USER_AGENT)
-            .connection_verbose(_verbose)
-            .build()
-            .map_err(io_err)?
-            .get(&url)
-            .send()
-            .map_err(io_err)?
-            .error_for_status()
-            .map_err(io_err)?
-            .text()
-            .map_err(io_err)?;
+        let response = ureq::get( &url)
+            
+            .header("user-agent", APP_USER_AGENT)
+            .call().map_err(io_err)?;
 
         // TODO:
         // if verbose {
         //     eprintln_color!(@Style::new().for_stderr().dim(), "{:#?}", response.timings);
         // }
 
-        Ok(response)
+        response.into_body().read_to_string().map_err(io_err)
     }
 
     // pub(super) fn print_verbose(msg: VerboseMessage, data: &[u8]) {
@@ -788,10 +780,9 @@ mod shared {
     // }
 
     pub(super) fn list_candidates(candidates_dir: &Path) -> io::Result<Vec<Candidate>> {
-        let mut candidates = fs::read_dir(candidates_dir).map(|it|it
-            .filter_map(read_entry)
-            .collect::<Vec<_>>())
-           .unwrap_or(vec![]);
+        let mut candidates = fs::read_dir(candidates_dir)
+            .map(|it| it.filter_map(read_entry).collect::<Vec<_>>())
+            .unwrap_or_default();
 
         // sort by version
         candidates.sort();

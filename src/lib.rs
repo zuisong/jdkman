@@ -12,7 +12,7 @@ pub mod prelude {
         candidate::Candidate,
         commands::results::*,
         commands::{JdkCurrent, JdkDefault, JdkInstall, JdkList, JdkUse},
-        eprintln_color, eprintln_green, eprintln_red, eprintln_yellow,
+        eprintln_green, eprintln_red, eprintln_yellow,
         sdkman::{candidates_api, candidates_dir, platform},
     };
 }
@@ -46,9 +46,7 @@ fn io_err<E: ToString>(err: E) -> io::Error {
 
 #[macro_export]
 macro_rules! eprint_color {
-    ($color:path, $($arg:tt)*) => {
-        $crate::eprint_color!(@ ::console::Style::new().fg($color), $($arg)*);
-    };
+
 
     (@ $style:expr, $($arg:tt)*) => ({
         if $crate::use_color() {

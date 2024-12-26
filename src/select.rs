@@ -25,7 +25,7 @@ pub(crate) struct SelectOptions<'a, T> {
     verbose: bool,
 }
 
-impl<'a, T> Default for SelectOptions<'a, T> {
+impl<T> Default for SelectOptions<'_, T> {
     fn default() -> Self {
         Self {
             items: Vec::new(),
@@ -75,7 +75,7 @@ impl<'a, T> SelectOptions<'a, T> {
     }
 }
 
-impl<'a, T: Display> SelectOptions<'a, T> {
+impl<T: Display> SelectOptions<'_, T> {
     pub(crate) fn select(&mut self) -> io::Result<Selection<T>> {
         fzf_select(std::mem::take(self))
     }
